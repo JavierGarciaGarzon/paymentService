@@ -3,8 +3,6 @@ package com.nttdata.payment.infrastructure.rest.controller;
 import com.nttdata.payment.application.usecases.PaymentService;
 import com.nttdata.payment.domain.dto.PaymentDTO;
 import com.nttdata.payment.domain.dto.request.PaymentRequest;
-import com.nttdata.payment.domain.model.Payment;
-import com.nttdata.payment.application.service.PaymentServiceImpl;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

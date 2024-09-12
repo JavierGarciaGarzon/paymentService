@@ -9,7 +9,7 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface PaymentDboMapper {
 
-    @Mapping(source ="userId", target = "user.id")
+    @Mapping(source = "userId", target = "user.id")
     PaymentEntity paymentToEntity(Payment domain);
 
     @InheritInverseConfiguration

@@ -3,7 +3,6 @@ package com.nttdata.payment.application;
 import com.nttdata.payment.application.mapper.PaymentDtoMapper;
 import com.nttdata.payment.application.mapper.PaymentRequestMapper;
 import com.nttdata.payment.application.service.PaymentServiceImpl;
-import com.nttdata.payment.domain.dto.PaymentDTO;
 import com.nttdata.payment.domain.dto.request.PaymentRequest;
 import com.nttdata.payment.domain.model.Payment;
 import com.nttdata.payment.domain.port.PaymentPersistencePort;
@@ -18,7 +17,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentServiceImplTest {

@@ -33,8 +33,8 @@ public class PaymentSpringJpaAdapter implements PaymentPersistencePort {
 
     @Override
     public List<Payment> findByUserId(Long userId) {
-        List<Payment> payments= paymentRepository.findByUserId(userId).stream().map(paymentDboMapper::entityToPayment).toList();
-        if (payments.isEmpty()){
+        List<Payment> payments = paymentRepository.findByUserId(userId).stream().map(paymentDboMapper::entityToPayment).toList();
+        if (payments.isEmpty()) {
             throw new PaymentException(HttpStatus.NOT_FOUND, PaymentConstants.USER_NOT_FOUND);
         }
         return payments;

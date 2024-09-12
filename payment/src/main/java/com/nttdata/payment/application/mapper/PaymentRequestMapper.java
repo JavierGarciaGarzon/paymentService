@@ -9,12 +9,12 @@ import org.mapstruct.Mappings;
 @Mapper(componentModel = "spring")
 public interface PaymentRequestMapper {
     @Mappings({
-        @Mapping(source = "id", target = "id"),
-        @Mapping(source = "cardNumber", target = "cardNumber"),
-        @Mapping(source = "amount", target = "amount"),
-        @Mapping(source = "paymentDate", target = "paymentDate"),
-        @Mapping(source = "description", target = "description"),
-        @Mapping(source = "userId", target = "userId")
+            @Mapping(source = "id", target = "id"),
+            @Mapping(source = "cardNumber", target = "cardNumber"),
+            @Mapping(source = "amount", target = "amount"),
+            @Mapping(source = "paymentDate", target = "paymentDate"),
+            @Mapping(source = "description", target = "description"),
+            @Mapping(source = "userId", target = "userId")
     })
     Payment requestToDomain(PaymentRequest request);
 }
