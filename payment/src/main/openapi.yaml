@@ -1,0 +1,57 @@
+openapi: 3.0.0
+info:
+  title: Payment Microservice
+  description: API para la gestión de pagos de tarjetas de crédito
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api
+paths:
+  /payments:
+    post:
+      summary: register one payment
+      requestBody:
+        description: Datos del pago a registrar
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Payment'
+      responses:
+        '201':
+          description: Pago registrado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          description: Error de validación
+    get:
+      summary: Obtener listado de pagos
+      responses:
+        '200':
+          description: Listado de pagos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Payment'
+components:
+  schemas:
+    Payment:
+      type: object
+      properties:
+        cardNumber:
+          type: string
+          example: XXXX-XXXX-XXXX-1234
+        amount:
+          type: number
+          format: double
+          example: 150.75
+        paymentDate:
+          type: string
+          format: date
+          example: "2024-09-03"
+        description:
+          type: string
+          example: "Pago en tienda B"
