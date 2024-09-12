@@ -1,0 +1,676 @@
+<passage file_path=/payment/src/main/java/com/nttdata/payment/infrastructure/adapter/mapper/PaymentDboMapper.java>
+package com.nttdata.payment.infrastructure.adapter.mapper;
+
+import com.nttdata.payment.domain.model.Payment;
+import com.nttdata.payment.infrastructure.adapter.entity.PaymentEntity;
+import org.mapstruct.InheritInverseConfiguration;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Mappings;
+
+@Mapper(componentModel = "spring")
+public interface PaymentDboMapper {
+    @Mappings({
+        @Mapping(source = "id", target = "id"),
+        @Mapping(source = "cardNumber", target = "cardNumber"),
+        @Mapping(source ="amount", target = "amount"),
+        @Mapping(source ="paymentDate", target = "paymentDate"),
+        @Mapping(source ="description", target = "description"),
+        @Mapping(source ="userId", target = "user.id")
+    })
+    PaymentEntity paymentToEntity(Payment domain);
+
+    @InheritInverseConfiguration
+    Payment entityToPayment(PaymentEntity entity);
+}
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/application/mapper/PaymentDtoMapper.java>
+package com.nttdata.payment.application.mapper;
+
+import com.nttdata.payment.domain.dto.PaymentDTO;
+import com.nttdata.payment.domain.model.Payment;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Mappings;
+
+@Mapper(componentModel = "spring")
+public interface PaymentDtoMapper {
+    @Mappings({
+        @Mapping(source = "id", target = "id"),
+        @Mapping(source = "cardNumber", target = "maskedCardNumber"),
+        @Mapping(source ="amount", target = "amount"),
+        @Mapping(source ="paymentDate", target = "paymentDate"),
+        @Mapping(source ="description", target = "description"),
+        @Mapping(source ="userId", target = "userId")
+    })
+    PaymentDTO paymentToPaymentDto(Payment payment);
+}
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/application/mapper/PaymentRequestMapper.java>
+package com.nttdata.payment.application.mapper;
+
+import com.nttdata.payment.domain.dto.request.PaymentRequest;
+import com.nttdata.payment.domain.model.Payment;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Mappings;
+
+@Mapper(componentModel = "spring")
+public interface PaymentRequestMapper {
+    @Mappings({
+        @Mapping(source = "id", target = "id"),
+        @Mapping(source = "cardNumber", target = "cardNumber"),
+        @Mapping(source = "amount", target = "amount"),
+        @Mapping(source = "paymentDate", target = "paymentDate"),
+        @Mapping(source = "description", target = "description"),
+        @Mapping(source = "userId", target = "userId")
+    })
+    Payment requestToDomain(PaymentRequest request);
+}
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/application/service/PaymentServiceImpl.java>
+@Service
+public class PaymentServiceImpl implements PaymentService {
+
+    private final PaymentPersistencePort paymentPersistencePort;
+    private final PaymentRequestMapper paymentRequestMapper;
+    private final PaymentDtoMapper paymentDtoMapper;
+
+    @Autowired
+    public PaymentServiceImpl(PaymentPersistencePort paymentPersistencePort, PaymentRequestMapper paymentRequestMapper, PaymentDtoMapper paymentDtoMapper) {
+        this.paymentPersistencePort = paymentPersistencePort;
+        this.paymentRequestMapper = paymentRequestMapper;
+        this.paymentDtoMapper = paymentDtoMapper;
+    }
+
+    @Override
+    public PaymentDTO createPayment(PaymentRequest paymentRequest) {
+        var paymentToCreate = paymentRequestMapper.requestToDomain(paymentRequest);
+        var paymentCreated = paymentPersistencePort.create(paymentToCreate);
+        return paymentDtoMapper.paymentToPaymentDto(paymentCreated);
+    }
+
+    @Override
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/infrastructure/PaymentSpringJpaAdapter.java>
+@Service
+@Transactional
+public class PaymentSpringJpaAdapter implements PaymentPersistencePort {
+    private final PaymentRepository paymentRepository;
+    private final PaymentDboMapper paymentDboMapper;
+
+    public PaymentSpringJpaAdapter(PaymentRepository paymentRepository, PaymentDboMapper paymentDboMapper) {
+        this.paymentRepository = paymentRepository;
+        this.paymentDboMapper = paymentDboMapper;
+    }
+
+    @Override
+    public Payment create(Payment payment) {
+        var paymentToSave = paymentDboMapper.paymentToEntity(payment);
+        var paymentSaved = paymentRepository.save(paymentToSave);
+
+        return paymentDboMapper.entityToPayment(paymentSaved);
+    }
+
+    @Override
+    public List<Payment> findByUserId(Long userId) {
+        List<Payment> payments= paymentRepository.findByUserId(userId).stream().map(paymentDboMapper::entityToPayment).toList();
+        if (payments.isEmpty()){
+            throw new PaymentException(HttpStatus.NOT_FOUND, PaymentConstants.USER_NOT_FOUND);
+        }
+        return payments;
+    }
+
+}
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/application/service/PaymentServiceImpl.java>
+package com.nttdata.payment.application.service;
+
+import com.nttdata.payment.application.mapper.PaymentDtoMapper;
+import com.nttdata.payment.application.mapper.PaymentRequestMapper;
+import com.nttdata.payment.application.usecases.PaymentService;
+import com.nttdata.payment.domain.dto.PaymentDTO;
+import com.nttdata.payment.domain.dto.request.PaymentRequest;
+import com.nttdata.payment.domain.port.PaymentPersistencePort;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/infrastructure/PaymentSpringJpaAdapter.java>
+package com.nttdata.payment.infrastructure;
+
+import com.nttdata.payment.domain.constants.PaymentConstants;
+import com.nttdata.payment.domain.model.Payment;
+import com.nttdata.payment.domain.port.PaymentPersistencePort;
+import com.nttdata.payment.infrastructure.adapter.exception.PaymentException;
+import com.nttdata.payment.infrastructure.adapter.mapper.PaymentDboMapper;
+import com.nttdata.payment.infrastructure.adapter.repository.PaymentRepository;
+import jakarta.transaction.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/PaymentApplication.java>
+package com.nttdata.payment;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+
+@SpringBootApplication()
+public class PaymentApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(PaymentApplication.class, args);
+	}
+
+}
+
+</passage>
+<passage file_path=/payment/src/test/java/com/nttdata/payment/PaymentEntityApplicationTests.java>
+package com.nttdata.payment;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class PaymentEntityApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/application/service/PaymentServiceImpl.java>
+    @Override
+    public List<PaymentDTO> getPaymentsByUserId(Long userId) {
+        return paymentPersistencePort.findByUserId(userId).stream().map(paymentDtoMapper::paymentToPaymentDto).toList();
+    }
+}
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/domain/model/User.java>
+package com.nttdata.payment.domain.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class User {
+    private Long id;
+    private String name;
+    private String email;
+    private List<Payment> payments;
+}
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/infrastructure/config/OpenApiConfig.java>
+package com.nttdata.payment.infrastructure.config;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class OpenApiConfig {
+
+    @Bean
+    public OpenAPI customOpenAPI() {
+        return new OpenAPI()
+                .info(new Info()
+                        .title("Payment Service API")
+                        .version("1.0")
+                        .description("API for managing credit card payments"));
+    }
+}
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/infrastructure/rest/controller/PaymentController.java>
+@RestController
+@RequestMapping("/api/payments")
+public class PaymentController {
+
+    private final PaymentService paymentService;
+
+    public PaymentController(PaymentService paymentService) {
+        this.paymentService = paymentService;
+    }
+
+    @PostMapping
+    public PaymentDTO createPayment(@RequestBody PaymentRequest payment) {
+        return paymentService.createPayment(payment);
+    }
+
+    @GetMapping("/user/{userId}")
+    public List<PaymentDTO> getPaymentsByUserId(@PathVariable Long userId) {
+        return paymentService.getPaymentsByUserId(userId);
+    }
+}
+</passage>
+<passage file_path=/payment/src/main/resources/db/payment/schema.sql>
+CREATE TABLE IF NOT EXISTS users (
+    id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+    id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    card_number VARCHAR(19) NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    payment_date DATE NOT NULL,
+    description VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    user_id BIGINT,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/infrastructure/adapter/entity/PaymentEntity.java>
+package com.nttdata.payment.infrastructure.adapter.entity;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "payments")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class PaymentEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "card_number")
+    private String cardNumber;
+    private BigDecimal amount;
+    @Column(name = "payment_date")
+    private LocalDate paymentDate;
+    private String description;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    @JsonBackReference
+    private UserEntity user;
+}
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/domain/model/Payment.java>
+package com.nttdata.payment.domain.model;
+
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Payment {
+    private Long id;
+    private String cardNumber;
+    private BigDecimal amount;
+    private LocalDate paymentDate;
+    private String description;
+    private Long userId;
+}
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/domain/port/PaymentPersistencePort.java>
+package com.nttdata.payment.domain.port;
+
+import com.nttdata.payment.domain.model.Payment;
+
+import java.util.List;
+
+public interface PaymentPersistencePort {
+    List<Payment> findByUserId(Long userId);
+
+    Payment create(Payment payment);
+
+}
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/infrastructure/adapter/entity/UserEntity.java>
+package com.nttdata.payment.infrastructure.adapter.entity;
+
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import jakarta.persistence.*;
+import lombok.Data;
+
+import java.util.List;
+
+@Entity
+@Table(name = "users")
+@Data
+public class UserEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String email;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonManagedReference
+    private List<PaymentEntity> paymentEntities;
+}
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/infrastructure/adapter/repository/PaymentRepository.java>
+package com.nttdata.payment.infrastructure.adapter.repository;
+
+import com.nttdata.payment.domain.model.Payment;
+import com.nttdata.payment.infrastructure.adapter.entity.PaymentEntity;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface PaymentRepository extends JpaRepository<PaymentEntity, Long> {
+    List<PaymentEntity> findByUserId(Long userId);
+}
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/application/usecases/PaymentService.java>
+package com.nttdata.payment.application.usecases;
+
+import com.nttdata.payment.domain.dto.PaymentDTO;
+import com.nttdata.payment.domain.dto.request.PaymentRequest;
+
+import java.util.List;
+
+public interface PaymentService {
+    PaymentDTO createPayment(PaymentRequest payment);
+
+    List<PaymentDTO> getPaymentsByUserId(Long userId);
+}
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/infrastructure/adapter/repository/UserRepository.java>
+package com.nttdata.payment.infrastructure.adapter.repository;
+
+import com.nttdata.payment.infrastructure.adapter.entity.UserEntity;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface UserRepository extends JpaRepository<UserEntity, Long> {
+}
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/domain/dto/PaymentDTO.java>
+package com.nttdata.payment.domain.dto;
+
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+@Data
+@NoArgsConstructor
+public class PaymentDTO {
+    private Long id;
+    private String maskedCardNumber;
+    private BigDecimal amount;
+    private String description;
+    private LocalDateTime paymentDate;
+    private Long userId;
+
+    public PaymentDTO(Long id, String cardNumber, BigDecimal amount, String description, LocalDateTime paymentDate, Long userId) {
+        this.id = id;
+        this.maskedCardNumber = maskCardNumber(cardNumber);
+        this.amount = amount;
+        this.description = description;
+        this.paymentDate = paymentDate;
+        this.userId = userId;
+    }
+
+    private String maskCardNumber(String cardNumber) {
+        return "****-****-****-" + cardNumber.substring(cardNumber.length() - 4);
+    }
+}
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/infrastructure/adapter/exception/PaymentException.java>
+package com.nttdata.payment.infrastructure.adapter.exception;
+
+import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.http.HttpStatus;
+
+@Getter
+@Setter
+public class PaymentException extends RuntimeException {
+    private final HttpStatus status;
+
+    public PaymentException(HttpStatus status, String message) {
+        super(message);
+        this.status = status;
+    }
+}
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/domain/constants/PaymentConstants.java>
+package com.nttdata.payment.domain.constants;
+
+import org.springframework.stereotype.Component;
+
+@Component
+public class PaymentConstants {
+    public static String USER_NOT_FOUND = "User is not found";
+}
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/infrastructure/rest/controller/PaymentController.java>
+package com.nttdata.payment.infrastructure.rest.controller;
+
+import com.nttdata.payment.application.usecases.PaymentService;
+import com.nttdata.payment.domain.dto.PaymentDTO;
+import com.nttdata.payment.domain.dto.request.PaymentRequest;
+import com.nttdata.payment.domain.model.Payment;
+import com.nttdata.payment.application.service.PaymentServiceImpl;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/infrastructure/rest/advice/GlobalExceptionHandler.java>
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(PaymentException.class)
+    public ResponseEntity<ErrorResponse> handleSwapiException(PaymentException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(ex.getMessage(), ex.getStatus().getReasonPhrase(), LocalDateTime.now());
+        return new ResponseEntity<>(errorResponse, ex.getStatus());
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                "Internal server error",
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+}
+</passage>
+<passage file_path=/payment/src/main/resources/db/payment/data.sql>
+INSERT INTO users (name, email) VALUES ('John Doe', 'john.doe@example.com');
+INSERT INTO users (name, email) VALUES ('Jane Doe', 'jane.doe@example.com');
+
+INSERT INTO payments (card_number, amount, payment_date, description, user_id)
+VALUES ('1234-5678-9012-3456', 100.50, '2024-09-06', 'Pago de prueba', 1);
+
+INSERT INTO payments (card_number, amount, payment_date, description, user_id)
+VALUES ('9876-5432-1098-7654', 250.75, '2024-09-07', 'Pago en tienda B', 2);
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/domain/dto/request/PaymentRequest.java>
+package com.nttdata.payment.domain.dto.request;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
+public class PaymentRequest {
+    private Long id;
+    private String cardNumber;
+    private BigDecimal amount;
+    private LocalDateTime paymentDate;
+    private String description;
+    private Long userId;
+}
+
+</passage>
+<passage file_path=/payment/src/main/openapi.yaml>
+openapi: 3.0.0
+info:
+  title: Payment Microservice
+  description: API para la gestión de pagos de tarjetas de crédito
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api
+paths:
+  /payments:
+    post:
+      summary: register one payment
+      requestBody:
+        description: Datos del pago a registrar
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Payment'
+      responses:
+        '201':
+          description: Pago registrado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          description: Error de validación
+    get:
+      summary: Obtener listado de pagos
+      responses:
+        '200':
+          description: Listado de pagos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/infrastructure/rest/advice/GlobalExceptionHandler.java>
+package com.nttdata.payment.infrastructure.rest.advice;
+
+import com.nttdata.payment.infrastructure.adapter.exception.ErrorResponse;
+import com.nttdata.payment.infrastructure.adapter.exception.PaymentException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+
+import java.time.LocalDateTime;
+
+@ControllerAdvice
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/infrastructure/adapter/exception/UserNotFoundException.java>
+package com.nttdata.payment.infrastructure.adapter.exception;
+
+import org.springframework.http.HttpStatus;
+
+public class UserNotFoundException extends PaymentException {
+    public UserNotFoundException(String message) {
+        super(HttpStatus.NOT_FOUND, message);
+    }
+}
+
+</passage>
+<passage file_path=/payment/src/main/java/com/nttdata/payment/infrastructure/adapter/exception/ErrorResponse.java>
+package com.nttdata.payment.infrastructure.adapter.exception;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ErrorResponse {
+    private String details;
+    private String message;
+    private LocalDateTime timestamp;
+}
+
+</passage>
+<passage file_path=/payment/src/main/openapi.yaml>
+'200':
+          description: Listado de pagos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Payment'
+components:
+  schemas:
+    Payment:
+      type: object
+      properties:
+        cardNumber:
+          type: string
+          example: XXXX-XXXX-XXXX-1234
+        amount:
+          type: number
+          format: double
+          example: 150.75
+        paymentDate:
+          type: string
+          format: date
+          example: "2024-09-03"
+        description:
+          type: string
+          example: "Pago en tienda B"
+</passage>
